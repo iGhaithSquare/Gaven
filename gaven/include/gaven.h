@@ -1,6 +1,8 @@
 #ifndef GAVEN_H
 #define GAVEN_H
 
+/* Headers */
+#include "../src/debug/log.h"
 /* Application.h */
 #include <stdint.h>
 typedef struct application application;

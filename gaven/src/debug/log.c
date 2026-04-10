@@ -1,0 +1,100 @@
+#include "log.h"
+#include <stdio.h>
+#include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+WORD GAVEN_COLOR_TRANSLATE(GAVEN_COLOR color){
+    switch (color){
+        case GAVEN_RED:       return FOREGROUND_RED | FOREGROUND_INTENSITY;
+        case GAVEN_GREEN:     return FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+        case GAVEN_BLUE:      return FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+        case GAVEN_YELLOW:    return FOREGROUND_RED | FOREGROUND_GREEN;
+        case GAVEN_MAGENTA:   return FOREGROUND_RED | FOREGROUND_BLUE;
+        case GAVEN_CYAN:      return FOREGROUND_GREEN | FOREGROUND_BLUE;
+        default:        GAVEN_WARN("COLOR NOT SUPPORTED"); /* no break for fallthrough*/
+        case GAVEN_WHITE:     return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY; /* default fallback */
+    }
+}
+#elif defined(__linux__)
+const char* GAVEN_COLOR_TRANSLATE(GAVEN_COLOR color){
+    switch (color){
+        case GAVEN_RED:       return "\033[31m";
+        case GAVEN_GREEN:     return "\033[32m";
+        case GAVEN_BLUE:      return "\033[34m";
+        case GAVEN_YELLOW:    return "\033[33m";
+        case GAVEN_MAGENTA:   return "\033[35m";
+        case GAVEN_CYAN:      return "\033[36m";
+        case GAVEN_WHITE:     return "\033[37m";
+        default:        GAVEN_WARN("COLOR NOT SUPPORTED"); /* no break for fallthrough*/
+        case GAVEN_COLOR_RESET:     return "\033[0m"; /* default fallback */
+    }
+}
+#else
+void char* GAVEN_COLOR_TRANSLATE(GAVEN_COLOR color){
+    GAVEN_ASSERT(0,"Platform Not Supported");
+}
+#endif
+void GAVEN_PRINT_COLOR_V(GAVEN_COLOR color, const char* message, va_list args){
+    #ifdef _WIN32
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hConsole,&csbi);
+    WORD originalColor = csbi.wAttributes;
+    SetConsoleTextAttribute(hConsole,GAVEN_COLOR_TRANSLATE(color));
+    vprintf(message,args);
+    SetConsoleTextAttribute(hConsole,originalColor);
+    #elif defined(__linux__)
+    printf("%s",GAVEN_COLOR_TRANSLATE(color));
+    vprintf(message,args);
+    printf("%s",GAVEN_COLOR_TRANSLATE(GAVEN_COLOR_RESET));
+    #else
+    GAVEN_ASSERT(0,"Platform Not Supported");
+    #endif
+}
+void GAVEN_PRINT_COLOR(GAVEN_COLOR color, const char* message, ...){
+    va_list args;
+    va_start(args, message);
+    GAVEN_PRINT_COLOR_V(color,message,args);
+    va_end(args);
+}
+char* gaven_get_time(const char* format, char* buffer, size_t size){
+    time_t rawtime;
+    struct tm timeinfo;
+    time(&rawtime);
+    localtime_s(&timeinfo,&rawtime);
+    strftime(buffer,size,format,&timeinfo);
+    return buffer;
+}
+void log_to_file(const char* message) {return;} //todo
+
+#ifdef GAVEN_DEBUG
+void GAVEN_WARN(const char* message, ...){
+    va_list args;
+    char time_buffer[16];
+    char msg_buffer[512];
+    char final_buffer[528];
+    gaven_get_time("%H:%M:%S",time_buffer,sizeof(time_buffer));
+    va_start(args,message);
+    vsnprintf(msg_buffer,sizeof(msg_buffer),message,args);
+    va_end(args);
+    snprintf(final_buffer,sizeof(final_buffer),"[%s] WARNING: %s\n",time_buffer,msg_buffer);
+    GAVEN_PRINT_COLOR(GAVEN_RED,final_buffer);
+}
+void GAVEN_INFO(const char* message, ...){
+    va_list args;
+    char time_buffer[16];
+    char msg_buffer[512];
+    char final_buffer[528];
+    gaven_get_time("%H:%M:%S",time_buffer,sizeof(time_buffer));
+    va_start(args,message);
+    vsnprintf(msg_buffer,sizeof(msg_buffer),message,args);
+    va_end(args);
+    snprintf(final_buffer,sizeof(final_buffer),"[%s] WARNING: %s\n",time_buffer,msg_buffer);
+    GAVEN_PRINT_COLOR(GAVEN_GREEN,final_buffer);
+}
+void GAVEN_ASSERT(int a, const char* b){ return;} //todo
+#else
+void GAVEN_WARN(const char* message, ...){ return;} 
+void GAVEN_INFO(const char* message, ...){ return;}
+void GAVEN_ASSERT(int a, const char* b){ return;} 
+#endif
