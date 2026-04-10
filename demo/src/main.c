@@ -1,6 +1,4 @@
-
 #include "gaven.h"
-
 /* The user can either use the prebuilt main or create his own*/
 /* to create our own main we first define NO_GAVEN_MAIN */
 /* Using our own main*/
@@ -27,6 +25,7 @@ application* gaven_main(int argc, char** argv){
     /* User Specific Code */
     GAVEN_WARN("HELLO WORLD");
     GAVEN_INFO("ANOTHER THING TO BE PRINTED");
+    GAVEN_ASSERT(0,"ASSERTING FOR NO REASON 0");
     /* We return the application*/
     return app;
 }

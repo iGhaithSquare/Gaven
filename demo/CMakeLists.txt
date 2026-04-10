@@ -11,7 +11,7 @@ target_link_libraries(demo gaven)
 target_include_directories(demo PRIVATE include)
 
 target_compile_definitions(gaven
-PRIVATE
+PUBLIC
     $<$<CONFIG:Debug>:GAVEN_DEBUG>
     $<$<CONFIG:Release>:GAVEN_RELEASE>
     CONFIG="$<CONFIG>"
