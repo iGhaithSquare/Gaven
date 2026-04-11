@@ -3,6 +3,7 @@
 
 /* Headers */
 #include "../src/debug/log.h"
+#include "../src/event.h"
 /* Application.h */
 #include <stdint.h>
 typedef struct application application;
