@@ -1,5 +1,12 @@
 #include "gaven.h"
 #include <stdio.h>
+#include <stdlib.h>
+/*creating a layer phase*/
+create_layer_phase(example_update,0);
+/*creating a layer callback*/
+void test_callback(layer* self, void* ctx){
+    GAVEN_WARN("Update Callback");
+}
 /* creating an event category */
 create_event_category(test_category,0);
 /* creating an event type */
@@ -48,9 +55,13 @@ application* gaven_main(int argc, char** argv){
     /* We create the application*/
     application* app = create_gaven_application();
     /* User Specific Code */
-    GAVEN_WARN("HELLO WORLD");
-    GAVEN_INFO("ANOTHER THING TO BE PRINTED");
-    
+    GAVEN_WARN("Warn0");
+    /* Creating A layer*/
+    layer* example_layer=(layer*)malloc(sizeof(layer));
+    /*binding the layer to a phase*/
+    bind_layer_phase(example_layer,layer_phase_example_update,test_callback,NULL);
+    /* Adding the layer to the registry */
+    add_layer(app->Layer_Registry,example_layer);
     test_event TEST_EVENT;
     test_event_init(&TEST_EVENT,1);
     char test_event_print[64];

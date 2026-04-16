@@ -142,8 +142,13 @@ void gaven_assert_message(const char* message, const char* file, const char* fun
     GAVEN_PRINT_COLOR(GAVEN_RED,final_buffer);
     log_to_file(final_buffer);
 }
+
+void destroy_logging(void){
+    fclose(get_logFile());
+}
 #else
 void GAVEN_WARN(const char* message, ...){ return;} 
 void GAVEN_INFO(const char* message, ...){ return;}
 void gaven_assert_message(const char* message, const char* file, const char* function, uint32_t line,...){ return;}
+void destroy_logging(void){ return; }
 #endif

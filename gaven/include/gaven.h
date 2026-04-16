@@ -4,12 +4,15 @@
 /* Headers */
 #include "../src/debug/log.h"
 #include "../src/event.h"
+#include "../src/layer/layer.h"
 /* Application.h */
 #include <stdint.h>
 typedef struct application application;
 
 struct application{
-    uint8_t running;
+    uint8_t Running;
+    layer_registry* Layer_Registry;
+    void (*user_pump_events_function)(application* self);
 };
 application* create_gaven_application();
 #ifdef NO_GAVEN_MAIN

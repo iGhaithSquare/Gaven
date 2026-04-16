@@ -2,7 +2,7 @@
 #define LOG_H
 #include <stdarg.h>
 #include <stdint.h>
-#include <stdlib.h>
+
 typedef enum{
     GAVEN_COLOR_RESET,
     GAVEN_RED,
@@ -24,6 +24,7 @@ void GAVEN_PRINT_COLOR_V(GAVEN_COLOR color, const char* message, va_list args);
 void GAVEN_INFO(const char* message, ...);
 void GAVEN_WARN(const char* message, ...);
 void gaven_assert_message(const char* message, const char* file, const char* function, uint32_t line,...);
+void destroy_logging(void);
 #ifdef GAVEN_DEBUG
 #define GAVEN_ASSERT(condition, message, ...)\
     do {\
