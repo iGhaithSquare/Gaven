@@ -2,9 +2,9 @@
 #define GAVEN_H
 
 /* Headers */
-#include "../src/debug/log.h"
-#include "../src/event.h"
-#include "../src/layer/layer.h"
+#include "../src/core/debug/log.h"
+#include "../src/core/event.h"
+#include "../src/core/layer/layer.h"
 /* Application.h */
 #include <stdint.h>
 typedef struct application application;
