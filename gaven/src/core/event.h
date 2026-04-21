@@ -27,9 +27,14 @@ typedef struct event{
     void (*To_String)(struct event *Event, char* buffer, size_t buffer_size);
 }event;
 static inline uint8_t is_event_in_category(event *Event,event_category Category){ return (Event->Category_Flags & Category)!=0;}
-#define EVENT_DISPATCH(Event_Pointer, Event_Type, Dispatch_Function,...)\
+#define EVENT_DISPATCH_V(Event_Pointer, Event_Type, Dispatch_Function,...)\
     do{\
         if((Event_Pointer)!=NULL && (Event_Pointer)->Type == event_type_##Event_Type)\
             (Event_Pointer)->Handled = Dispatch_Function((Event_Type*)(Event_Pointer),__VA_ARGS__);\
+    } while(0)
+#define EVENT_DISPATCH(Event_Pointer, Event_Type, Dispatch_Function)\
+    do{\
+        if((Event_Pointer)!=NULL && (Event_Pointer)->Type == event_type_##Event_Type)\
+            (Event_Pointer)->Handled = Dispatch_Function((Event_Type*)(Event_Pointer));\
     } while(0)
 #endif
