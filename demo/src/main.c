@@ -1,11 +1,50 @@
 #include "gaven.h"
 #include <stdio.h>
 #include <stdlib.h>
+//todo: fix memory leaks.
 /*creating a layer phase*/
-create_layer_phase(example_update,0);
+create_layer_phase(Update,0);
+/* creating layer data*/
+typedef struct example_layer_data{
+    http* Server;
+} example_layer_data;
+/* using OnEvent */
+int example_on_networking_recieve(networking_recieve* E){
+    const char* headers =
+    "Content-Type: text/html; charset=utf-8\r\n";
+
+    const char* body =
+    "<!DOCTYPE html>"
+    "<html>"
+    "<head>"
+    "<title>Gaven Server</title>"
+    "</head>"
+    "<body>"
+    "<h1>Hello World</h1>"
+    "<p>Your server is working.</p>"
+    "</body>"
+    "</html>";
+    GAVEN_INFO("Data recieved: %.*s",E->Size,E->Recieved_Data);
+
+    send_http_response(E->Connection, body, 200, "OK", headers);
+    return 1;
+}
+void example_on_event(layer* self, event* Event){
+    char buffer[1024];
+    Event->To_String(Event,buffer,1024);
+    EVENT_DISPATCH(Event,networking_recieve,example_on_networking_recieve);
+} 
+/* detaching */
+void example_on_dettach(layer*self){
+    /*using layer data*/
+    example_layer_data* Data = (example_layer_data*)self->LayerData;
+    destroy_http_server(Data->Server);
+}
 /*creating a layer callback*/
-void test_callback(layer* self, void* ctx){
-    GAVEN_WARN("Update Callback");
+void polling_callback(layer* self, void* ctx){
+    /*using layer data*/
+    example_layer_data* Data = (example_layer_data*)self->LayerData;
+    poll_http(Data->Server);
 }
 /* creating an event category */
 create_event_category(test_category,0);
@@ -43,9 +82,9 @@ int main(){
     /* User Specific Code */
     GAVEN_WARN("HELLO WORLD");
     /* We call the run loop */
-    run_application(app);
+    run_application();
     /* We destroy the application*/
-    destroy_application(app);
+    destroy_application();
     return 0;
 }
 #else
@@ -57,9 +96,14 @@ application* gaven_main(int argc, char** argv){
     /* User Specific Code */
     GAVEN_WARN("Warn0");
     /* Creating A layer*/
-    layer* example_layer=(layer*)malloc(sizeof(layer));
+    layer* example_layer=calloc(1,sizeof(layer));
     /*binding the layer to a phase*/
-    bind_layer_phase(example_layer,layer_phase_example_update,test_callback,NULL);
+    bind_layer_phase(example_layer,layer_phase_polling,polling_callback,NULL);
+    /* using layer data */
+    example_layer_data *data = (example_layer_data*)malloc(sizeof(example_layer_data));
+    data->Server = create_http_server(NULL,5000);
+    example_layer->OnEvent=example_on_event;
+    example_layer->LayerData = data;
     /* Adding the layer to the registry */
     add_layer(app->Layer_Registry,example_layer);
     test_event TEST_EVENT;

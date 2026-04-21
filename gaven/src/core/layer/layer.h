@@ -27,8 +27,6 @@ typedef struct layer_registry{
 } layer_registry;
 #define create_layer_phase(phase_name,order)\
     enum { layer_phase_##phase_name = (layer_phase)(order) }
-#define create_layer_phase(phase_name,order)\
-    enum { layer_phase_##phase_name = (layer_phase)(order) }
 
 struct layer{
     const char* Name;

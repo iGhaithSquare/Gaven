@@ -5,6 +5,7 @@
 #include "../src/core/debug/log.h"
 #include "../src/core/event.h"
 #include "../src/core/layer/layer.h"
+#include "../src/networking/http.h"
 /* Application.h */
 #include <stdint.h>
 typedef struct application application;
@@ -12,16 +13,16 @@ typedef struct application application;
 struct application{
     uint8_t Running;
     layer_registry* Layer_Registry;
-    void (*user_pump_events_function)(application* self);
 };
-application* create_gaven_application();
+
+void application_event_callback(event *e);
+application* create_gaven_application(void);
 #ifdef NO_GAVEN_MAIN
-void run_application(application* self);
-void destroy_application(application* self);
+void run_application(void);
+void destroy_application(void);
 #endif
-
-/* Next header public implementation*/
-
+/* Macros */
+create_layer_phase(polling,0);
 #ifndef GAVEN_MAIN
 #endif
 #endif

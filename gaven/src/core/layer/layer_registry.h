@@ -1,6 +1,6 @@
 #include "layer.h"
 #include <stdlib.h>
-#include "debug/log.h"
+#include "core/debug/log.h"
 static inline layer_registry* create_layer_registry(void){
     layer_registry* Registry = (layer_registry*)malloc(sizeof(layer_registry));
     GAVEN_ASSERT(Registry!=NULL,"Couldnt allocate memory to Registry");

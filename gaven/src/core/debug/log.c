@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 WORD GAVEN_COLOR_TRANSLATE(GAVEN_COLOR color){
     switch (color){

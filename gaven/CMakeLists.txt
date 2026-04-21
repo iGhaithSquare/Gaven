@@ -17,8 +17,8 @@ PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(gaven PRIVATE cjson)
-target_include_directories(gaven PRIVATE
+target_link_libraries(gaven PUBLIC cjson)
+target_include_directories(gaven PUBLIC
     ${cjson_SOURCE_DIR}
 )
 if(WIN32)
