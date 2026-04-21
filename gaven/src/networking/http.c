@@ -164,13 +164,21 @@ void http_stream_append_data(http_stream* Stream, const char* data,size_t length
 }
 void send_http_step(http_connection *Connection){
     http_stream *Send_Stream = &Connection->Sending_Stream;
-    size_t Send_Chunk  = send(Connection->Socket,Send_Stream->Data,Send_Stream->Size,0);
+    int Send_Chunk  = send(Connection->Socket,Send_Stream->Data,Send_Stream->Size,0);
     if(Send_Chunk > 0){
-        size_t Remaining = Send_Stream->Size-Send_Chunk;
-        if (Remaining > 0) memmove(Send_Stream->Data,Send_Stream->Data+Send_Chunk,Remaining);
+        size_t Remaining = Send_Stream->Size-(size_t)(Send_Chunk);
+        if (Remaining > 0) memmove(Send_Stream->Data,Send_Stream->Data+(size_t)(Send_Chunk),Remaining);
         Send_Stream->Size=Remaining;
         return;
     }
+    #ifdef _WIN32
+    int err = WSAGetLastError();
+    if (err==WSAEWOULDBLOCK) return;
+    #else
+    int err = errno;
+    if (err==EAGAIN||err==EWOULDBLOCK) return;
+    #endif
+    GAVEN_WARN("Sending http failed: %d",err);
 }
 void packet_recieved(http_connection *Connection){
     http_stream *Recieve_Stream = &Connection->Recieving_Stream;
@@ -439,7 +447,6 @@ http_response create_http_response(const char *Body, int Status_Code, const char
     return Req;
 }
 void send_as_http_response(http_connection* Connection, http_response* Response){
-    GAVEN_WARN("NONSENSE");
     size_t total_size;
     size_t body_length = Response->Body?strlen(Response->Body):0;
     char c_body_length[64];
@@ -447,16 +454,11 @@ void send_as_http_response(http_connection* Connection, http_response* Response)
     uint32_t status_code_length=0;
     uint32_t i =Response->Status_Code;
     do{i/=10; status_code_length++;} while (i);
-    GAVEN_WARN("NONSENSE 11");
     total_size = 9+status_code_length+1+strlen(Response->Status_Text)+2+strlen(Response->Headers)+16+strlen(c_body_length)+4+body_length;
     char* buffer=malloc(total_size+1);
     GAVEN_ASSERT(buffer!=NULL,"Failed to create http request buffer");
-    GAVEN_WARN("NONSENSE 2");
     snprintf(buffer,total_size+1,"HTTP/1.1 %d %s\r\n%sContent-Length:%zu\r\n\r\n%s",Response->Status_Code,Response->Status_Text,Response->Headers,body_length,Response->Body);
-    
-    GAVEN_WARN("NONSENSE 3");
     http_stream_append_data(&Connection->Sending_Stream,buffer,total_size);
-    GAVEN_WARN("NONSENSE 4");
     free(buffer);
 }
 void destroy_http_response(http_response* Response){
