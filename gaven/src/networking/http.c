@@ -72,12 +72,15 @@ void resolve_address(const char* ip_address,int port,http *server){
 void start_windows_networkthingy(void){
     static int A = 0;
     WSADATA wsaData;
+    GAVEN_WARN("A = 0");
     if(A) return;
+
     GAVEN_ASSERT(WSAStartup(MAKEWORD(2, 2), &wsaData)==0,"WSAStartup failed.");
     if (LOBYTE(wsaData.wVersion) != 2 ||HIBYTE(wsaData.wVersion) != 2){
         WSACleanup();
         GAVEN_ASSERT(0,"Version 2.2 of Winsock not available.");
     }
+    GAVEN_WARN("AFTER ASSERTS");
     A=1;
 }
 http* make_valid_http_context(void){

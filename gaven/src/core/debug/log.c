@@ -87,7 +87,7 @@ char* gaven_get_time(const char* format, char* buffer, size_t size){
     strftime(buffer,size,format,&timeinfo);
     return buffer;
 }
-#ifdef GAVEN_DEBUG
+#ifndef NDEBUG
 static FILE* get_logFile(void){
     char buffer[64];
     static FILE* log = NULL;

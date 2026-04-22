@@ -25,7 +25,7 @@ void GAVEN_INFO(const char* message, ...);
 void GAVEN_WARN(const char* message, ...);
 void gaven_assert_message(const char* message, const char* file, const char* function, uint32_t line,...);
 void destroy_logging(void);
-#ifdef GAVEN_DEBUG
+#ifndef NDEBUG
 #define GAVEN_ASSERT(condition, message, ...)\
     do {\
         if (!(condition)) {\
@@ -35,7 +35,13 @@ void destroy_logging(void);
     }\
     while(0)
 #else
-#define GAVEN_ASSERT(condition, message, ...) ((void)0)
+#define GAVEN_ASSERT(condition, message, ...)\
+    do {\
+        if (!(condition)) {\
+            gaven_assert_message(message, __FILE__,__FUNCTION__,__LINE__,##__VA_ARGS__);\
+        }\
+    }\
+    while(0)
 
 #endif
 #endif
