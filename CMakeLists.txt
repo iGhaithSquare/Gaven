@@ -12,4 +12,8 @@ include(Dependencies.cmake)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/DEMO)
 
 add_subdirectory(gaven)
+
+option(GAVEN_BUILD_DEMO "Build Demo" OFF)
+if (GAVEN_BUILD_DEMO)
 add_subdirectory(demo)
+endif()
