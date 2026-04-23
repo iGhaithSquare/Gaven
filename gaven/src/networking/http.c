@@ -258,6 +258,7 @@ void packet_recieved(http_connection *Connection){
     Recieve_Stream->Size-=Recieve_Stream->Pos;
     Recieve_Stream->Pos=0;
     Recieve_Stream->Content_Length=0;
+    free(Packet_Data);
 }
 void parse_http_stream_header(http_stream *Recieve_Stream){
     size_t i=0;
@@ -306,11 +307,8 @@ void recieve_http_step(http *Http,http_connection *Connection){
         while(Recieve_Stream->Pos+3<Recieve_Stream->Size){
             if(Recieve_Stream->Data[Recieve_Stream->Pos]=='\r'&&Recieve_Stream->Data[Recieve_Stream->Pos+1]=='\n'&&Recieve_Stream->Data[Recieve_Stream->Pos+2
             ]=='\r'&&Recieve_Stream->Data[Recieve_Stream->Pos+3]=='\n'){
-                GAVEN_WARN("Size of header %d",Recieve_Stream->Pos+3);
-                GAVEN_WARN("streaming cap: %d",Recieve_Stream->Cap);
                 if(!Recieve_Stream->Content_Length)
                     parse_http_stream_header(Recieve_Stream);
-                GAVEN_WARN("CONTENT LENGTH: %zu", Recieve_Stream->Content_Length);
                 if(Recieve_Stream->Pos+Recieve_Stream->Content_Length+3>=Recieve_Stream->Size)return;
                 Recieve_Stream->Pos+=Recieve_Stream->Content_Length+4;
                 packet_recieved(Connection);
