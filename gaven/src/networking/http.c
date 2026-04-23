@@ -26,12 +26,15 @@ struct http_connection {
     http_stream Recieving_Stream;
     http_stream Sending_Stream;
     net_socket Socket;
+    uint8_t Verified;
+
+    char IP[64];
+    uint16_t Port;
 };
 
 struct http{
     struct addrinfo *Res;
     net_socket Socket;
-    struct sockaddr_storage Their_addr;
     size_t Connections_Count;
     size_t Connections_Size;
     http_connection **Connections;
@@ -72,7 +75,6 @@ void resolve_address(const char* ip_address,int port,http *server){
 void start_windows_networkthingy(void){
     static int A = 0;
     WSADATA wsaData;
-    GAVEN_WARN("A = 0");
     if(A) return;
 
     GAVEN_ASSERT(WSAStartup(MAKEWORD(2, 2), &wsaData)==0,"WSAStartup failed.");
@@ -80,7 +82,6 @@ void start_windows_networkthingy(void){
         WSACleanup();
         GAVEN_ASSERT(0,"Version 2.2 of Winsock not available.");
     }
-    GAVEN_WARN("AFTER ASSERTS");
     A=1;
 }
 http* make_valid_http_context(void){
@@ -90,10 +91,14 @@ http* make_valid_http_context(void){
     Ctx->Connections_Count=0;
     Ctx->Connections_Size=0;
     Ctx->Res=NULL;
+    #ifdef _WIN32
+    Ctx->Socket=INVALID_SOCKET;
+    #else
     Ctx->Socket=-1;
+    #endif
     return Ctx;
 }
-http *create_http_server(const char* address,int port){
+http *create_http_server(const char* address,uint16_t port){
     #ifdef _WIN32
     start_windows_networkthingy();
     #endif
@@ -105,7 +110,7 @@ http *create_http_server(const char* address,int port){
     int yes =1;
     #endif
     struct addrinfo* p;
-    resolve_address(address,port,server);
+    resolve_address(address,(int)(port),server);
     for(p = server->Res; p != NULL; p = p->ai_next) {
         server->Socket = socket(p->ai_family, p->ai_socktype,p->ai_protocol);
         if (server->Socket==-1) continue;
@@ -125,32 +130,91 @@ http *create_http_server(const char* address,int port){
     freeaddrinfo(server->Res);
     return server;
 }
-http *connect_http_client(const char* address,int port){
+uint8_t check_for_connection(http* server,net_socket Socket){
+    if(server->Connections_Size!=0){
+        for(int i=0;i<server->Connections_Count;i++){
+            if(server->Connections[i]->Socket==Socket)
+                return 1;
+        }
+    }
+    return 0;
+}
+http_connection* create_connection(http* server, net_socket Socket, char host[],uint16_t port){
+    if(server->Connections_Size==0){
+        server->Connections_Count=0;
+        server->Connections_Size=4;
+        server->Connections=(http_connection**)malloc(sizeof(http_connection*)*server->Connections_Size);
+        http_connection* con;
+        con = malloc(sizeof(http_connection));
+        memset(con,0,sizeof(http_connection));
+        con->Socket=Socket;
+        strncpy(con->IP,host,sizeof(con->IP)-1);
+        con->Port=port;
+        con->Verified=0;
+        server->Connections[server->Connections_Count++]=con;
+        return con;
+    }
+    size_t new_cap = server->Connections_Size;
+    if(new_cap<=server->Connections_Count)
+        new_cap=new_cap*2;
+    if(new_cap!=server->Connections_Size){
+        http_connection** temp = realloc(server->Connections,new_cap*sizeof(http_connection*));
+        GAVEN_ASSERT(temp, "Couldnt allocate new memory");
+        server->Connections_Size = new_cap;
+        server->Connections = temp;
+    }
+    http_connection* con;
+    con = malloc(sizeof(http_connection));
+    memset(con,0,sizeof(http_connection));
+    con->Socket=Socket;
+    strncpy(con->IP,host,sizeof(con->IP)-1);
+    con->Port=port;
+    con->Verified=0;
+    server->Connections[server->Connections_Count++]=con;
+    return con;
+}
+http *create_http_client(void){
     #ifdef _WIN32
     start_windows_networkthingy();
     #endif
-    http *server = (http*)malloc(sizeof(http));
-    int yes =1;
+    http *client = (http*)calloc(1,sizeof(http));
+    #ifdef _WIN32
+    client->Socket=INVALID_SOCKET;
+    #else
+    client->Socket=-1;
+    #endif
+    return client;
+}
+http_connection *connect_http_client(http* client,char address[],uint16_t port){
+    uint8_t connected =0;
     struct addrinfo* p;
-    resolve_address(address,port,server);
-    for(p = server->Res; p != NULL; p = p->ai_next) {
-        server->Socket = socket(p->ai_family, p->ai_socktype,p->ai_protocol);
-        if (server->Socket==-1) continue;
-        set_nonblocking(server->Socket);
+    net_socket Socket;
+    resolve_address(address,(int)(port),client);
+    for(p = client->Res; p != NULL; p = p->ai_next) {
+        Socket = socket(p->ai_family, p->ai_socktype,p->ai_protocol);
+        if (Socket==-1) continue;
+        set_nonblocking(Socket);
+        int result=connect(Socket, p->ai_addr, p->ai_addrlen);
         #ifdef _WIN32
-        if (connect(server->Socket, p->ai_addr, p->ai_addrlen) == -1) {
-            closesocket(server->Socket);
-            continue;
+        if (result ==0||(result ==SOCKET_ERROR && WSAGetLastError()==WSAEWOULDBLOCK)) {
+            connected=1;
+            break;
+        }    
+        closesocket(Socket);
         #else
-        if (connect(server->Socket, p->ai_addr, p->ai_addrlen) == -1) {
-            close(server->Socket);
-            continue;
-        #endif
+        if (result ==0||(result ==-1 &&errno==EINPROGRESS)) {
+            connected=1;
+            break;
         }
-        break;
+        close(Socket);
+        #endif
     }
-    freeaddrinfo(server->Res);
-    return server;
+    http_connection* con=NULL;
+    if(connected&&!check_for_connection(client,Socket)){
+        con=create_connection(client,Socket,address,port);
+    } else GAVEN_WARN("Couldnt Connect Client");
+    freeaddrinfo(client->Res);
+    return con;
 }
 
 void http_stream_append_data(http_stream* Stream, const char* data,size_t length){
@@ -185,12 +249,15 @@ void send_http_step(http_connection *Connection){
 }
 void packet_recieved(http_connection *Connection){
     http_stream *Recieve_Stream = &Connection->Recieving_Stream;
+    char *Packet_Data = malloc(Recieve_Stream->Pos);
+    memcpy(Packet_Data,Recieve_Stream->Data,Recieve_Stream->Pos);
     networking_recieve Recieve_Event;
-    networking_recieve_init(&Recieve_Event,Connection,Recieve_Stream->Data,Recieve_Stream->Size);
+    networking_recieve_init(&Recieve_Event,Connection,Packet_Data,Recieve_Stream->Pos);
     application_event_callback(&Recieve_Event.base);
     memmove(Recieve_Stream->Data,Recieve_Stream->Data+Recieve_Stream->Pos,Recieve_Stream->Size-Recieve_Stream->Pos);
     Recieve_Stream->Size-=Recieve_Stream->Pos;
     Recieve_Stream->Pos=0;
+    Recieve_Stream->Content_Length=0;
 }
 void parse_http_stream_header(http_stream *Recieve_Stream){
     size_t i=0;
@@ -218,7 +285,6 @@ void parse_http_stream_header(http_stream *Recieve_Stream){
 void recieve_http_step(http *Http,http_connection *Connection){
     size_t i;
     http_stream* Recieve_Stream = &Connection->Recieving_Stream;
-    Recieve_Stream->Cap;
     if(Recieve_Stream->Cap==0){
         Recieve_Stream->Cap=1024;
         char* temp = realloc(Recieve_Stream->Data,Recieve_Stream->Cap);
@@ -240,8 +306,11 @@ void recieve_http_step(http *Http,http_connection *Connection){
         while(Recieve_Stream->Pos+3<Recieve_Stream->Size){
             if(Recieve_Stream->Data[Recieve_Stream->Pos]=='\r'&&Recieve_Stream->Data[Recieve_Stream->Pos+1]=='\n'&&Recieve_Stream->Data[Recieve_Stream->Pos+2
             ]=='\r'&&Recieve_Stream->Data[Recieve_Stream->Pos+3]=='\n'){
+                GAVEN_WARN("Size of header %d",Recieve_Stream->Pos+3);
+                GAVEN_WARN("streaming cap: %d",Recieve_Stream->Cap);
                 if(!Recieve_Stream->Content_Length)
                     parse_http_stream_header(Recieve_Stream);
+                GAVEN_WARN("CONTENT LENGTH: %zu", Recieve_Stream->Content_Length);
                 if(Recieve_Stream->Pos+Recieve_Stream->Content_Length+3>=Recieve_Stream->Size)return;
                 Recieve_Stream->Pos+=Recieve_Stream->Content_Length+4;
                 packet_recieved(Connection);
@@ -274,64 +343,95 @@ void recieve_http_step(http *Http,http_connection *Connection){
 }
 void poll_http(http* server){
     size_t i;
-    uint8_t check=0;
-    socklen_t address_size = sizeof(server->Their_addr);
-    net_socket clientfd = accept(server->Socket, (struct sockaddr *)&server->Their_addr,&address_size);
-    if( clientfd !=-1){
-        if(server->Connections_Size==0){
-            server->Connections_Count=0;
-            server->Connections_Size=4;
-            server->Connections=(http_connection**)malloc(sizeof(http_connection*)*server->Connections_Size);
-            http_connection* con;
-            con = malloc(sizeof(http_connection));
-            memset(con,0,sizeof(http_connection));
-            con->Socket=clientfd;
-            server->Connections[server->Connections_Count++]=con;
-        }
-        else{
-            for(i=0;i<server->Connections_Count;i++){
-                if(server->Connections[i]->Socket==clientfd)
-                    check=1;
+    struct sockaddr_storage Their_Addr;
+    #ifdef _WIN32 //The server socket is defined means this is a server not a client so we can accept.
+    if(server->Socket!=INVALID_SOCKET){
+    #else
+    if(server->Socket!=0){
+    #endif
+        while(1){
+            socklen_t address_size = sizeof(Their_Addr);
+            net_socket clientfd = accept(server->Socket, (struct sockaddr *)&Their_Addr,&address_size);
+            if( clientfd !=-1){
+                char host[64];
+                char port_c[8];
+                uint16_t port;
+                socklen_t len = sizeof(Their_Addr);
+                getnameinfo((struct sockaddr*)&Their_Addr,len,host,64,port_c,8,NI_NUMERICHOST|NI_NUMERICSERV);
+                port = (uint16_t)(atoi(port_c));
+                http_connection* con =create_connection(server,clientfd,host,port);
+                networking_new_connection New_Con;
+                networking_new_connection_init(&New_Con,con,host,port);
+                application_event_callback(&New_Con.base);
             }
-            if(!check){
-                size_t new_cap = server->Connections_Size;
-                if(new_cap<=server->Connections_Count)
-                    new_cap=new_cap*2;
-                if(new_cap!=server->Connections_Size){
-                    http_connection** temp = realloc(server->Connections,new_cap*sizeof(http_connection*));
-                    GAVEN_ASSERT(temp, "Couldnt allocate new memory");
-                    server->Connections_Size = new_cap;
-                    server->Connections = temp;
+            else{
+                #ifdef _WIN32
+                int err= WSAGetLastError();
+                if(err!=WSAEWOULDBLOCK){
+                    GAVEN_WARN("Polling Error: %d",err);
+                    //error event callback
                 }
-                http_connection* con;
-                con = malloc(sizeof(http_connection));
-                memset(con,0,sizeof(http_connection));
-                con->Socket=clientfd;
-                server->Connections[server->Connections_Count++]=con;
-                check=0;
+                else break;
+                #else
+                if((errno!=EAGAIN)&&(errno!=EWOULDBLOCK)){
+                    GAVEN_WARN("Polling Error: %d",errno);
+                    //error event callback
+                }
+                else break;
+                #endif
             }
         }
-        networking_poll Poll;
-        networking_poll_init(&Poll);
-        application_event_callback(&Poll.base);
-
     }
-    else{
-        #ifdef _WIN32
-        int err= WSAGetLastError();
-        if(err!=WSAEWOULDBLOCK){
-            GAVEN_WARN("Polling Error: %d",err);
-            //error event callback
-        }
-        #else
-        if((errno!=EAGAIN)&&(errno!=EWOULDBLOCK)){
-            GAVEN_WARN("Polling Error: %d",errno);
-            //error event callback
-        }
-        #endif
-    }
+    
     for(i=0;i<server->Connections_Count;i++){
         http_connection *Connection = server->Connections[i];
+        if(Connection->Verified==0){
+            fd_set wfd;
+            FD_ZERO(&wfd);
+            FD_SET(Connection->Socket,&wfd);
+            struct timeval tv = {0,0};
+            int r = select(Connection->Socket+1,NULL,&wfd,NULL,&tv);
+            int err = 0;
+            if(r>0){
+                socklen_t lens = sizeof(err);
+                getsockopt(Connection->Socket,SOL_SOCKET,SO_ERROR,(char*)&err,&lens);
+                if(err == 0){
+                    GAVEN_INFO("CONNECTED");
+                    Connection->Verified=1;
+                }
+                //todo: add timeout
+                else{
+                #ifdef _WIN32
+                    closesocket(Connection->Socket);
+                #else
+                    close(Connection->Socket);
+                #endif
+                    server->Connections[i]=server->Connections[server->Connections_Count-1];
+                    free(Connection);
+                    server->Connections_Count--;
+                    i--;
+                    GAVEN_WARN("Connection Failed with error: %d",err);
+                    continue;
+                }
+            }
+            else if(r<0){
+                #ifdef _WIN32
+                err=WSAGetLastError();
+                closesocket(Connection->Socket);
+                #else
+                err=errno;
+                close(Connection->Socket);
+                #endif
+                server->Connections[i]=server->Connections[server->Connections_Count-1];
+                free(Connection);
+                server->Connections_Count--;
+                i--;
+                GAVEN_WARN("Connection Failed with error: %d",err);
+                continue;
+            }
+            else
+                continue;
+        }
         recieve_http_step(server,Connection);
         if(Connection->Sending_Stream.Size>0)
             send_http_step(Connection);
@@ -369,8 +469,8 @@ int send_http(net_socket Socket,char* buf, size_t* len){
     *len = total;
     return 0;
 }
-http_request create_http_request(http_method Method,cJSON *Body_JSON, const char* Path,const char* Headers){
-    char *h, *Body;
+http_request create_http_request(http_method Method,char *Body, const char* Path,const char* Headers){
+    char *h;
     if(!Headers) {
         h=malloc(3);
         h[0] ='\r';
@@ -387,7 +487,6 @@ http_request create_http_request(http_method Method,cJSON *Body_JSON, const char
             h[len+2] = '\0';
         }
     }
-    Body=cJSON_PrintUnformatted(Body_JSON);
     http_request Req = {
         .Method=Method,
         .Body=(Body?Body:""),
@@ -411,11 +510,16 @@ void send_as_http_request(http_connection* Connection, const http_request* Reque
 }
 void destroy_http_request(http_request* Request){
     if(!Request) return;
-    if (Request->Body) free(Request->Body);
     free(Request->Headers);
 }
-void send_http_request(http_connection* Connection,http_method Method,cJSON *Body_JSON, const char* Path,const char* Headers){
-    http_request h = create_http_request(Method,Body_JSON,Path,Headers);
+
+inline static void send_http_request_json(http_connection* Connection,http_method Method,cJSON* Body_JSON, const char* Path,const char* Headers){
+    char* Body=cJSON_PrintUnformatted(Body_JSON);
+    send_http_request(Connection,Method,Body,Path,Headers);
+    free(Body);
+}
+void send_http_request(http_connection* Connection,http_method Method,char* Body, const char* Path,const char* Headers){
+    http_request h = create_http_request(Method,Body,Path,Headers);
     send_as_http_request(Connection,&h);
     destroy_http_request(&h);
 }
@@ -469,8 +573,9 @@ void destroy_http_response(http_response* Response){
     free(Response->Headers);
 }
 inline static void send_http_response_json(http_connection* Connection,cJSON *Body_JSON, int Status_Code, const char* Status_Text,const char* Headers){
-    const char *Body=cJSON_PrintUnformatted(Body_JSON);
+    char *Body=cJSON_PrintUnformatted(Body_JSON);
     send_http_response(Connection,Body,Status_Code,Status_Text,Headers);
+    free(Body);
 }
 void send_http_response(http_connection* Connection,const char *Body, int Status_Code, const char* Status_Text,const char* Headers){
     http_response h = create_http_response(Body,Status_Code,Status_Text,Headers);
@@ -489,18 +594,21 @@ void destroy_http_server(http* server){
 
 
 
-static inline void networking_poll_to_string(event *Event, char* buffer, size_t buffer_size){
+static inline void networking_new_connection_to_string(event *Event, char* buffer, size_t buffer_size){
     if (!buffer) return;
-    networking_poll *Poll = (networking_poll *) Event;
-    snprintf(buffer, buffer_size, "Network poll");
+    networking_new_connection *Ev = (networking_new_connection *) Event;
+    snprintf(buffer, buffer_size, "New connection at %s Port: %d",Ev->Ip,Ev->Port);
 }
-void networking_poll_init(networking_poll *Event){
+void networking_new_connection_init(networking_new_connection *Event,http_connection *Connection,char Ip[], uint16_t Port){
     if(!Event) return;
     Event->base.Category_Flags = event_category_networking;
     Event->base.Handled = 0;
-    Event->base.Name = "Networking Poll";
-    Event->base.To_String = networking_poll_to_string;
-    Event->base.Type = event_type_networking_poll;
+    Event->base.Name = "Networking New Connection";
+    Event->Connection = Connection;
+    strncpy(Event->Ip,Ip,64-1);
+    Event->Port=Port;
+    Event->base.To_String = networking_new_connection_to_string;
+    Event->base.Type = event_type_networking_new_connection;
 }
 
 static inline void networking_recieve_to_string(event *Event, char* buffer, size_t buffer_size){

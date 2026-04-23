@@ -7,6 +7,8 @@ create_layer_phase(Update,0);
 /* creating layer data*/
 typedef struct example_layer_data{
     http* Server;
+    http* Client;
+    http_connection *Client_Connection;
 } example_layer_data;
 /* using OnEvent */
 int example_on_networking_recieve(networking_recieve* E){
@@ -24,8 +26,7 @@ int example_on_networking_recieve(networking_recieve* E){
     "<p>Your server is working.</p>"
     "</body>"
     "</html>";
-    GAVEN_INFO("Data recieved: %.*s",E->Size,E->Recieved_Data);
-
+    GAVEN_INFO("Data recieved: %.*s",1028,E->Recieved_Data);
     send_http_response(E->Connection, body, 200, "OK", headers);
     return 1;
 }
@@ -39,12 +40,14 @@ void example_on_dettach(layer*self){
     /*using layer data*/
     example_layer_data* Data = (example_layer_data*)self->LayerData;
     destroy_http_server(Data->Server);
+    destroy_http_server(Data->Client);
 }
 /*creating a layer callback*/
 void polling_callback(layer* self, void* ctx){
     /*using layer data*/
     example_layer_data* Data = (example_layer_data*)self->LayerData;
     poll_http(Data->Server);
+    poll_http(Data->Client);
 }
 /* creating an event category */
 create_event_category(test_category,0);
@@ -101,7 +104,12 @@ application* gaven_main(int argc, char** argv){
     bind_layer_phase(example_layer,layer_phase_polling,polling_callback,NULL);
     /* using layer data */
     example_layer_data *data = (example_layer_data*)malloc(sizeof(example_layer_data));
+    /* Creates an online server */
     data->Server = create_http_server(NULL,5000);
+    /* Creates an online client*/
+    data->Client = create_http_client();
+    send_http_request(connect_http_client(data->Client,"httpbin.org",80),HTTP_GET_REQUEST,"","/json","Host: example.com\r\nConnection: close\r\n");
+    GAVEN_WARN("AFTER REQUEST");
     example_layer->OnEvent=example_on_event;
     example_layer->LayerData = data;
     /* Adding the layer to the registry */
