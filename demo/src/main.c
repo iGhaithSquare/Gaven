@@ -26,8 +26,10 @@ int example_on_networking_recieve(networking_recieve* E){
     "<p>Your server is working.</p>"
     "</body>"
     "</html>";
-    GAVEN_INFO("Data recieved: %.*s",1028,E->Recieved_Data);
     send_http_response(E->Connection, body, 200, "OK", headers);
+    
+    //it wont print the entire thing becuase idk
+    GAVEN_INFO("Data recieved: %.*s",E->Size,E->Recieved_Data);
     return 1;
 }
 void example_on_event(layer* self, event* Event){

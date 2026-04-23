@@ -114,7 +114,9 @@ void GAVEN_WARN(const char* message, ...){
     vsnprintf(msg_buffer,sizeof(msg_buffer),message,args);
     va_end(args);
     snprintf(final_buffer,sizeof(final_buffer),"[%s] WARNING: %s\n",time_buffer,msg_buffer);
+    #if GAVEN_LOG_TO_CMD
     GAVEN_PRINT_COLOR(GAVEN_RED,final_buffer);
+    #endif
     log_to_file(final_buffer);
 }
 void GAVEN_INFO(const char* message, ...){
@@ -127,7 +129,9 @@ void GAVEN_INFO(const char* message, ...){
     vsnprintf(msg_buffer,sizeof(msg_buffer),message,args);
     va_end(args);
     snprintf(final_buffer,sizeof(final_buffer),"[%s] INFO: %s\n",time_buffer,msg_buffer);
+    #if GAVEN_LOG_TO_CMD
     GAVEN_PRINT_COLOR(GAVEN_GREEN,final_buffer);
+    #endif
     log_to_file(final_buffer);
 }
 void gaven_assert_message(const char* message, const char* file, const char* function, uint32_t line,...){

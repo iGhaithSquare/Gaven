@@ -21,6 +21,13 @@ target_link_libraries(gaven PUBLIC cjson)
 target_include_directories(gaven PUBLIC
     ${cjson_SOURCE_DIR}
 )
+
+option(GAVEN_LOG_TO_CMD "Log to Cmd" ON)
+if(GAVEN_LOG_TO_CMD)
+    target_compile_definitions(gaven PUBLIC GAVEN_LOG_TO_CMD=1)
+else()
+    target_compile_definitions(gaven PUBLIC GAVEN_LOG_TO_CMD=0)
+endif()
 if(WIN32)
     target_link_libraries(gaven PRIVATE ws2_32)
 endif()
