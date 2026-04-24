@@ -17,7 +17,7 @@ void run_application(void){
             phase_bucket *Bucket = &Registry->Phase_Buckets[i];
             for(j=0;j<Bucket->Count;j++){
                 layer_binding* b =Bucket->Bindings[j];
-                b->Layer_phase_callback(b->Layer,b->Phase_Context);
+                b->Layer_phase_callback(b->Layer,Bucket->Phase_Context);
             }
         }
     };

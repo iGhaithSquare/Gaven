@@ -8,7 +8,6 @@ typedef uint32_t layer_phase;
 typedef struct layer_binding{
     layer* Layer;
     layer_phase Phase;
-    void* Phase_Context;
     void (*Layer_phase_callback)(layer* self,void* phase_ctx);
 }layer_binding;
 typedef struct phase_bucket{
@@ -16,6 +15,7 @@ typedef struct phase_bucket{
     layer_phase Phase;
     size_t Count;
     size_t Capacity;
+    void* Phase_Context;
 }phase_bucket;
 typedef struct layer_registry{
     layer** Layers;
@@ -39,6 +39,7 @@ struct layer{
     void* LayerData;
 };
 void add_layer(layer_registry* Layer_Registry, layer* Layer);
-void bind_layer_phase(layer* Layer, layer_phase Phase, void (*Callback)(layer* self,void* phase_ctx), void* Phase_Context);
+void bind_layer_phase(layer* Layer, layer_phase Phase, void (*Callback)(layer* self,void* phase_ctx));
+void bind_phase_ctx(layer_registry* Registry, layer_phase Phase, void* Phase_Context);
 void remove_layer(layer_registry* Layer_Registry, layer* Layer);
 #endif

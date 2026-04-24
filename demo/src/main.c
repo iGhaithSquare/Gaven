@@ -103,7 +103,7 @@ application* gaven_main(int argc, char** argv){
     /* Creating A layer*/
     layer* example_layer=calloc(1,sizeof(layer));
     /*binding the layer to a phase*/
-    bind_layer_phase(example_layer,layer_phase_polling,polling_callback,NULL);
+    bind_layer_phase(example_layer,layer_phase_polling,polling_callback);
     /* using layer data */
     example_layer_data *data = (example_layer_data*)malloc(sizeof(example_layer_data));
     /* Creates an online server */

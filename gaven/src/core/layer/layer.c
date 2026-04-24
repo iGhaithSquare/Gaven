@@ -48,13 +48,38 @@ void register_into_phase_bucket(layer_registry* Registry,layer* Layer){
             Registry->Phase_Buckets[index].Bindings=NULL;
             Registry->Phase_Buckets[index].Count=0;
             Registry->Phase_Buckets[index].Capacity=0;
+            Registry->Phase_Buckets[index].Phase_Context=NULL;
             push_phase_bucket(&Registry->Phase_Buckets[index],b);
         }
     }
 }
 
-
-void bind_layer_phase(layer* Layer, layer_phase Phase, void (*Callback)(layer* self,void* phase_ctx),void* Phase_Context){
+void bind_phase_ctx(layer_registry* Registry, layer_phase Phase, void* Phase_Context){
+    int i=0;
+    while((i<Registry->Phase_Count)&&(Registry->Phase_Buckets[i].Phase<Phase)){
+        i++;
+    }
+    if(i<Registry->Phase_Count&&Phase==Registry->Phase_Buckets[i].Phase){
+        Registry->Phase_Buckets[i].Phase_Context=Phase_Context;
+        return;
+    }
+        
+    if(Registry->Phase_Count>=Registry->Phase_Capacity){
+        size_t new_cap = ((Registry->Phase_Capacity == 0)? 4: Registry->Phase_Capacity*2);
+        phase_bucket* temp = (phase_bucket*)realloc(Registry->Phase_Buckets,sizeof(phase_bucket)*new_cap);
+        GAVEN_ASSERT(temp,"Failed to allocate memory to registry");
+        Registry->Phase_Buckets= temp;
+        Registry->Phase_Capacity = new_cap;
+    }
+    memmove(&Registry->Phase_Buckets[i+1],&Registry->Phase_Buckets[i],(Registry->Phase_Count-i)*sizeof(phase_bucket));
+    Registry->Phase_Count++;
+    Registry->Phase_Buckets[i].Phase=Phase;
+    Registry->Phase_Buckets[i].Bindings=NULL;
+    Registry->Phase_Buckets[i].Count=0;
+    Registry->Phase_Buckets[i].Capacity=0;
+    Registry->Phase_Buckets[i].Phase_Context=Phase_Context;
+}
+void bind_layer_phase(layer* Layer, layer_phase Phase, void (*Callback)(layer* self,void* phase_ctx)){
     if(Layer->Bindings_Count>=Layer->Bindings_Capacity){
         size_t new_cap = ((Layer->Bindings_Capacity == 0)? 4: Layer->Bindings_Capacity*2);
         layer_binding* temp = (layer_binding *)realloc(Layer->Bindings,sizeof(layer_binding)*new_cap);
@@ -65,7 +90,6 @@ void bind_layer_phase(layer* Layer, layer_phase Phase, void (*Callback)(layer* s
     layer_binding* binding = &Layer->Bindings[Layer->Bindings_Count++];
     binding->Layer=Layer;
     binding->Phase=Phase;
-    binding->Phase_Context=Phase_Context;
     binding->Layer_phase_callback=Callback;
 }
 void add_layer(layer_registry* Layer_Registry, layer* Layer){
