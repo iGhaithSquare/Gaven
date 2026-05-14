@@ -1,9 +1,7 @@
 #ifndef GAVEN_H
 #define GAVEN_H
-
 /* Headers */
 #include "../src/core/debug/log.h"
-#include "../src/core/event.h"
 #include "../src/core/layer/layer.h"
 #include "../src/networking/http.h"
 /* Application.h */
@@ -15,14 +13,10 @@ struct application{
     layer_registry* Layer_Registry;
 };
 
-void application_event_callback(event *e);
-application* create_gaven_application(void);
-#ifdef NO_GAVEN_MAIN
-void run_application(void);
-void destroy_application(void);
-#endif
+GAVEN_API void application_event_callback(event *e);
+GAVEN_API application* create_gaven_application(void);
+GAVEN_API void run_application(void);
+GAVEN_API void destroy_application(void);
 /* Macros */
 create_layer_phase(polling,0);
-#ifndef GAVEN_MAIN
-#endif
 #endif

@@ -38,8 +38,8 @@ struct layer{
     void (*OnEvent)(layer* self, event* Event);
     void* LayerData;
 };
-void add_layer(layer_registry* Layer_Registry, layer* Layer);
-void bind_layer_phase(layer* Layer, layer_phase Phase, void (*Callback)(layer* self,void* phase_ctx));
-void bind_phase_ctx(layer_registry* Registry, layer_phase Phase, void* Phase_Context);
-void remove_layer(layer_registry* Layer_Registry, layer* Layer);
+GAVEN_API void add_layer(layer_registry* Layer_Registry, layer* Layer);
+GAVEN_API void bind_layer_phase(layer* Layer, layer_phase Phase, void (*Callback)(layer* self,void* phase_ctx));
+GAVEN_API void bind_phase_ctx(layer_registry* Registry, layer_phase Phase, void* Phase_Context);
+GAVEN_API void remove_layer(layer_registry* Layer_Registry, layer* Layer);
 #endif

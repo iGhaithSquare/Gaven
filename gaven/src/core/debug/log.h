@@ -3,6 +3,17 @@
 #include <stdarg.h>
 #include <stdint.h>
 
+#ifndef GAVEN_API
+#ifdef _WIN32
+    #ifdef GAVEN_BUILD_DLL
+        #define GAVEN_API __declspec(dllexport)
+    #else
+        #define GAVEN_API __declspec(dllimport)
+    #endif
+#else
+    #define GAVEN_API __attribute__((visibility("default")))
+#endif
+#endif
 typedef enum{
     GAVEN_COLOR_RESET,
     GAVEN_RED,
@@ -19,12 +30,12 @@ typedef enum{
     #include <signal.h>
     #define GAVEN_DEBUG_BREAK() raise(SIGTRAP)
 #endif
-void GAVEN_PRINT_COLOR(GAVEN_COLOR color, const char* message, ...);
-void GAVEN_PRINT_COLOR_V(GAVEN_COLOR color, const char* message, va_list args);
-void GAVEN_INFO(const char* message, ...);
-void GAVEN_WARN(const char* message, ...);
-void gaven_assert_message(const char* message, const char* file, const char* function, uint32_t line,...);
-void destroy_logging(void);
+GAVEN_API void GAVEN_PRINT_COLOR(GAVEN_COLOR color, const char* message, ...);
+GAVEN_API void GAVEN_PRINT_COLOR_V(GAVEN_COLOR color, const char* message, va_list args);
+GAVEN_API void GAVEN_INFO(const char* message, ...);
+GAVEN_API void GAVEN_WARN(const char* message, ...);
+GAVEN_API void gaven_assert_message(const char* message, const char* file, const char* function, uint32_t line,...);
+GAVEN_API void destroy_logging(void);
 #ifndef NDEBUG
 #define GAVEN_ASSERT(condition, message, ...)\
     do {\

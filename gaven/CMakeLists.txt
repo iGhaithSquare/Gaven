@@ -1,8 +1,10 @@
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.c")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/GAVEN)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/GAVEN)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/GAVEN)
 
-add_library(gaven STATIC)
+add_library(gaven SHARED)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -21,7 +23,7 @@ target_link_libraries(gaven PUBLIC cjson)
 target_include_directories(gaven PUBLIC
     ${cjson_SOURCE_DIR}
 )
-
+target_compile_definitions(gaven PRIVATE GAVEN_BUILD_DLL)
 option(GAVEN_LOG_TO_CMD "Log to Cmd" ON)
 if(GAVEN_LOG_TO_CMD)
     target_compile_definitions(gaven PUBLIC GAVEN_LOG_TO_CMD=1)
