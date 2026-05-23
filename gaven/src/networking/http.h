@@ -37,11 +37,11 @@ GAVEN_API http_connection *connect_http_client(http* client,char address[],uint1
 GAVEN_API void poll_http(http* server);
 GAVEN_API void destroy_http_server(http* server);
 
-inline static void send_http_request_json(http_connection* Connection,http_method Method,cJSON* Body_JSON, const char* Path,const char* Headers);
+GAVEN_API void send_http_request_json(http_connection* Connection,http_method Method,cJSON* Body_JSON, const char* Path,const char* Headers);
 GAVEN_API void send_http_request(http_connection* Connection,http_method Method,char* Body, const char* Path,const char* Headers);
 
 
-inline static void send_http_response_json(http_connection* Connection,cJSON *Body_JSON, int Status_Code, const char* Status_Text,const char* Headers);
+GAVEN_API void send_http_response_json(http_connection* Connection,cJSON *Body_JSON, int Status_Code, const char* Status_Text,const char* Headers);
 GAVEN_API void send_http_response(http_connection* Connection,const char *Body, int Status_Code, const char* Status_Text,const char* Headers);
 
 #endif

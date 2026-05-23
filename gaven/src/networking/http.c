@@ -51,7 +51,7 @@ struct http_response{
     char* Headers;
     const char* Body;
 };
-static inline void set_nonblocking(net_socket s){
+void set_nonblocking(net_socket s){
     #ifdef _WIN32
     long mode =1;
     ioctlsocket(s,FIONBIO,&mode);
@@ -256,8 +256,11 @@ void packet_recieved(http_connection *Connection){
     application_event_callback(&Recieve_Event.base);
     memmove(Recieve_Stream->Data,Recieve_Stream->Data+Recieve_Stream->Pos,Recieve_Stream->Size-Recieve_Stream->Pos);
     Recieve_Stream->Size-=Recieve_Stream->Pos;
+    Recieve_Stream->Content_Length-=Recieve_Stream->Pos;
+
     Recieve_Stream->Pos=0;
     Recieve_Stream->Content_Length=0;
+    Recieve_Stream->Data[0]='A';
     free(Packet_Data);
 }
 void parse_http_stream_header(http_stream *Recieve_Stream){
@@ -323,8 +326,8 @@ void recieve_http_step(http *Http,http_connection *Connection){
         // client disconnected
         for(i=0;i<Http->Connections_Count;i++)
             if(Http->Connections[i]==Connection){
-                Http->Connections[i]=Http->Connections[Http->Connections_Count-1];
                 free(Http->Connections[i]);
+                Http->Connections[i]=Http->Connections[Http->Connections_Count-1];
                 Http->Connections_Count--;
                 return;
             }
@@ -332,9 +335,28 @@ void recieve_http_step(http *Http,http_connection *Connection){
     #ifdef _WIN32
     int err = WSAGetLastError();
     if (err==WSAEWOULDBLOCK) return;
+    if(err==WSAECONNRESET){
+        for(i=0;i<Http->Connections_Count;i++)
+            if(Http->Connections[i]==Connection){
+                free(Http->Connections[i]);
+                Http->Connections[i]=Http->Connections[Http->Connections_Count-1];
+                Http->Connections_Count--;
+                return;
+            }
+    }
     #else
     int err = errno;
     if (err==EAGAIN||err==EWOULDBLOCK) return;
+    if(err==ECONNRESET){
+        
+        for(i=0;i<Http->Connections_Count;i++)
+            if(Http->Connections[i]==Connection){
+                free(Http->Connections[i]);
+                Http->Connections[i]=Http->Connections[Http->Connections_Count-1];
+                Http->Connections_Count--;
+                return;
+            }
+    }
     #endif
     GAVEN_WARN("Recieving packed failed: %d",err);
 
@@ -345,7 +367,7 @@ void poll_http(http* server){
     #ifdef _WIN32 //The server socket is defined means this is a server not a client so we can accept.
     if(server->Socket!=INVALID_SOCKET){
     #else
-    if(server->Socket!=0){
+    if(server->Socket!=-1){
     #endif
         while(1){
             socklen_t address_size = sizeof(Their_Addr);
@@ -510,8 +532,7 @@ void destroy_http_request(http_request* Request){
     if(!Request) return;
     free(Request->Headers);
 }
-
-inline static void send_http_request_json(http_connection* Connection,http_method Method,cJSON* Body_JSON, const char* Path,const char* Headers){
+void send_http_request_json(http_connection* Connection,http_method Method,cJSON* Body_JSON, const char* Path,const char* Headers){
     char* Body=cJSON_PrintUnformatted(Body_JSON);
     send_http_request(Connection,Method,Body,Path,Headers);
     free(Body);
@@ -570,7 +591,7 @@ void destroy_http_response(http_response* Response){
     if(!Response) return;
     free(Response->Headers);
 }
-inline static void send_http_response_json(http_connection* Connection,cJSON *Body_JSON, int Status_Code, const char* Status_Text,const char* Headers){
+void send_http_response_json(http_connection* Connection,cJSON *Body_JSON, int Status_Code, const char* Status_Text,const char* Headers){
     char *Body=cJSON_PrintUnformatted(Body_JSON);
     send_http_response(Connection,Body,Status_Code,Status_Text,Headers);
     free(Body);
@@ -589,7 +610,9 @@ void destroy_http_server(http* server){
     if(server->Res!=NULL)
         freeaddrinfo(server->Res);
 }
-
+void get_connection_from_ip(){
+    
+}
 
 
 static inline void networking_new_connection_to_string(event *Event, char* buffer, size_t buffer_size){
@@ -608,8 +631,7 @@ void networking_new_connection_init(networking_new_connection *Event,http_connec
     Event->base.To_String = networking_new_connection_to_string;
     Event->base.Type = event_type_networking_new_connection;
 }
-
-static inline void networking_recieve_to_string(event *Event, char* buffer, size_t buffer_size){
+void networking_recieve_to_string(event *Event, char* buffer, size_t buffer_size){
     if (!buffer) return;
     networking_recieve *Poll = (networking_recieve *) Event;
     snprintf(buffer, buffer_size, "Packed Recieved: %.*s",Poll->Size, Poll->Recieved_Data);

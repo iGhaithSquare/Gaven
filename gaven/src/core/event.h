@@ -11,18 +11,6 @@ typedef uint32_t event_category;
 #define EVENT_CATEGORY_BIT(x) ((event_category)1 <<  (x))
 /* creates an event category with the name "name".
 Note: bit needs to be unique number from 0 to 31 or to 63 if EVENT_CATEGORY_64 is defined*/
-
-#ifndef GAVEN_API
-#ifdef _WIN32
-    #ifdef GAVEN_BUILD_DLL
-        #define GAVEN_API __declspec(dllexport)
-    #else
-        #define GAVEN_API __declspec(dllimport)
-    #endif
-#else
-    #define GAVEN_API __attribute__((visibility("default")))
-#endif
-#endif
 #define create_event_category(name,bit)\
     enum { event_category_##name = (event_category)(EVENT_CATEGORY_BIT(bit)) }
 typedef uint32_t event_type;
