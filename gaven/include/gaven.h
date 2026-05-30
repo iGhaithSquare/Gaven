@@ -99,11 +99,12 @@ struct layer{
     void (*OnDettach)(layer* self);
     void (*OnEvent)(layer* self, event* Event);
     void* LayerData;
+    uint8_t Destroy;
 };
 GAVEN_API void add_layer(layer_registry* Layer_Registry, layer* Layer);
 GAVEN_API void bind_layer_phase(layer* Layer, layer_phase Phase, void (*Callback)(layer* self,void* phase_ctx));
 GAVEN_API void bind_phase_ctx(layer_registry* Registry, layer_phase Phase, void* Phase_Context);
-GAVEN_API void remove_layer(layer_registry* Layer_Registry, layer* Layer);
+void remove_layer(layer_registry* Layer_Registry, layer* Layer);
 #endif
 /*HTTP_H*/
 #include "../src/networking/http.h"

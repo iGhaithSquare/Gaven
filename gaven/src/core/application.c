@@ -20,7 +20,14 @@ void run_application(void){
                 b->Layer_phase_callback(b->Layer,Bucket->Phase_Context);
             }
         }
-    };
+        for(i=0;i<Registry->Count;i++){
+            layer* L=Registry->Layers[i];
+            if(L->Destroy){
+                remove_layer(Registry,L);
+                i--;
+            }
+        }
+    }
 }
 void application_event_callback(event *e){
     if(!e) return;
