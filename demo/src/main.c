@@ -1,3 +1,4 @@
+/* Enabling dynamic arrays*/
 #include "gaven.h"
 #include <string.h>
 #include <stdio.h>
