@@ -1,9 +1,10 @@
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.c")
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/GAVEN)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/GAVEN)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/GAVEN)
-
+if(NOT ANDROID)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/GAVEN)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/GAVEN)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/GAVEN)
+endif()
 add_library(gaven SHARED)
 
 set(CMAKE_C_STANDARD 11)
@@ -18,9 +19,12 @@ PUBLIC
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-
+include(FetchContent)
+FetchContent_GetProperties(cjson)
 target_link_libraries(gaven PUBLIC cjson)
 target_include_directories(gaven PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
     ${cjson_SOURCE_DIR}
 )
 target_compile_definitions(gaven PRIVATE GAVEN_BUILD_DLL)

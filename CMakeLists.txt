@@ -8,9 +8,10 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+if(NOT ANDROID)
 include(Dependencies.cmake)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin/$<CONFIG>/DEMO)
-
+endif()
 add_subdirectory(gaven)
 
 option(GAVEN_BUILD_DEMO "Build Demo" OFF)

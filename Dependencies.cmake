@@ -11,3 +11,5 @@ FetchContent_MakeAvailable(cjson)
 target_compile_options(cjson PRIVATE
     -w
 )
+FetchContent_GetProperties(cjson)
+

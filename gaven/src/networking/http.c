@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include "http.h"
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <cJSON.h>
 #define HTTP_BACKLOG 20
 #ifdef _WIN32
@@ -10,8 +12,10 @@
 typedef SOCKET net_socket;
 #else
 #include <sys/socket.h>
-#include <sys/netdb.h>
+#include <netdb.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
 typedef int net_socket;
 #endif
 void application_event_callback(event *e);
@@ -72,6 +76,7 @@ void resolve_address(const char* ip_address,int port,http *server){
     status = getaddrinfo(ip_address, port_c, &hints, &server->Res);
     GAVEN_ASSERT(status==0,"gai error: %s\n", gai_strerror(status));
 }
+#ifdef _WIN32
 void start_windows_networkthingy(void){
     static int A = 0;
     WSADATA wsaData;
@@ -84,6 +89,7 @@ void start_windows_networkthingy(void){
     }
     A=1;
 }
+#endif
 http* make_valid_http_context(void){
     http* Ctx= (http*)malloc(sizeof(http));
     GAVEN_ASSERT(Ctx,"Couldnt create networking context");
