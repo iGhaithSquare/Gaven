@@ -12,13 +12,14 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 target_sources(gaven PRIVATE ${SOURCES})
 
-target_include_directories(gaven
-PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-PRIVATE
+target_include_directories(gaven PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
+
+if(ANDROID)
+    find_library(ANDROID_LOG_LIB log)
+    target_link_libraries(gaven PRIVATE ${ANDROID_LOG_LIB})
+endif()
 include(FetchContent)
 FetchContent_GetProperties(cjson)
 target_link_libraries(gaven PUBLIC cjson)

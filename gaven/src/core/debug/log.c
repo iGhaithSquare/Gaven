@@ -24,7 +24,21 @@ void create_folder(const char* path){
     CreateDirectoryA(path,NULL);
     GAVEN_ASSERT(check_folder_exists(path),"COULD NOT CREATE LOG FOLDER");
 }
-#elif defined(__linux__)
+#elif defined(__ANDROID__)
+#define GAVEN_ANDROID_TAG "GAVEN"
+#include <sys/stat.h>
+#include <android/log.h>
+const char* GAVEN_COLOR_TRANSLATE(GAVEN_COLOR color){
+    return "";
+}
+uint8_t check_folder_exists(const char* path){
+    return 0;
+}
+void create_folder(const char* path){
+    (void)path;
+    return;
+}
+#else
 #include <sys/stat.h>
 const char* GAVEN_COLOR_TRANSLATE(GAVEN_COLOR color){
     switch (color){
@@ -47,10 +61,6 @@ void create_folder(const char* path){
     mkdir(path,0755);
     GAVEN_ASSERT(check_folder_exists(path),"COULD NOT CREATE LOG FOLDER");
 }
-#else
-void char* GAVEN_COLOR_TRANSLATE(GAVEN_COLOR color){
-    GAVEN_ASSERT(0,"Platform Not Supported");
-}
 #endif
 void GAVEN_PRINT_COLOR_V(GAVEN_COLOR color, const char* message, va_list args){
     #ifdef _WIN32
@@ -61,12 +71,24 @@ void GAVEN_PRINT_COLOR_V(GAVEN_COLOR color, const char* message, va_list args){
     SetConsoleTextAttribute(hConsole,GAVEN_COLOR_TRANSLATE(color));
     vprintf(message,args);
     SetConsoleTextAttribute(hConsole,originalColor);
-    #elif defined(__linux__)
+    #elif defined(__ANDROID__)
+    char buffer[1024];
+    vsnprintf(buffer,sizeof(buffer),message,args);
+    int priority;
+    switch (color){
+        case GAVEN_RED:
+            priority=ANDROID_LOG_ERROR;
+            break;
+        case GAVEN_GREEN:
+        default:
+            priority=ANDROID_LOG_INFO;
+            break;
+    }
+    __android_log_write(priority,GAVEN_ANDROID_TAG,buffer);
+    #else
     printf("%s",GAVEN_COLOR_TRANSLATE(color));
     vprintf(message,args);
     printf("%s",GAVEN_COLOR_TRANSLATE(GAVEN_COLOR_RESET));
-    #else
-    GAVEN_ASSERT(0,"Platform Not Supported");
     #endif
 }
 void GAVEN_PRINT_COLOR(GAVEN_COLOR color, const char* message, ...){
@@ -81,7 +103,7 @@ char* gaven_get_time(const char* format, char* buffer, size_t size){
     time(&rawtime);
     #ifdef _WIN32
         localtime_s(&timeinfo,&rawtime);
-    #elif  defined(__linux__)
+    #else
         localtime_r(&rawtime,&timeinfo);
     #endif
     strftime(buffer,size,format,&timeinfo);
@@ -100,9 +122,11 @@ static FILE* get_logFile(void){
     return log;
 }
 void log_to_file(const char* message) {
+    #ifndef __ANDROID__
     FILE *log = get_logFile();
     fprintf(log,"%s",message);
     fflush(log);
+    #endif
 }
 void GAVEN_WARN(const char* message, ...){
     va_list args;
